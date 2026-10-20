@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdbool.h>
 #include <stdint.h>
 
-#define __FPDKSW__ "1.3"
+#define __FPDKSW__ "1.4"
 #define __FPDKHW__ "1.2"
 
 typedef enum FPDKHWVARIANT
@@ -40,6 +40,7 @@ typedef enum FPDKICTYPE
   FPDK_IC_FLASH    = 0xF0,
   FPDK_IC_FLASH_1  = 0xF1,
   FPDK_IC_FLASH_2  = 0xF2,
+  FPDK_IC_FLASH_2L = 0xF3,   //PFS122: like FLASH_2, written in limited-voltage mode (word by word, lower VDD)
 } FPDKICTYPE;
 
 #define  FPDK_IS_FLASH_TYPE(type) (0xF0==(type&0xF0))

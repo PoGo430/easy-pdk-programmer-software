@@ -147,7 +147,7 @@ int FPDKCOM_Open(const char* devname)
     serialcom_close(fd);
     return -2;
   }
-  if( (FPDKPROTO_MAJOR != proto_major) || (FPDKPROTO_MINOR != proto_minor) )
+  if( (FPDKPROTO_MAJOR != proto_major) || (proto_minor < FPDKPROTO_MINOR_MIN) || (proto_minor > FPDKPROTO_MINOR) )
   {
     serialcom_close(fd);
     return -3;

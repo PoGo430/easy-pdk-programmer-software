@@ -294,6 +294,7 @@ static uint16_t _FPDK_SendCommand(const FPDKICTYPE type, const uint8_t command)
       break;
 
     case FPDK_IC_FLASH_2:
+    case FPDK_IC_FLASH_2L:
       _FPDK_SendBits32F(0xA5A5A5A0 | command, 32);                                                 //preamble+command
       _FPDK_SetDatIncoming();                                                                      //set DAT incoming
       ack = _FPDK_RecvBits32(17);                                                                  //receive ack
@@ -325,6 +326,7 @@ static uint32_t _FPDK_ReadAddr(const FPDKICTYPE type, const uint32_t addr, const
   {
     case FPDK_IC_FLASH_1:
     case FPDK_IC_FLASH_2:
+    case FPDK_IC_FLASH_2L:
       _FPDK_SendBits32F(addr,addr_bits);                                                           //send address to read from 
       _FPDK_SetDatIncoming();                                                                      //set DAT incoming
       _FPDK_CLK_UP();
@@ -411,6 +413,45 @@ static void _FPDK_WriteAddr(const FPDKICTYPE type, const uint32_t addr, const ui
         }
 
         _FPDK_SetDatOutgoing();                                                                        //set DAT outgoing
+      }
+      break;
+
+    case FPDK_IC_FLASH_2L:
+      {
+        //limited-voltage write (PFS122). Same sequence as the upstream development firmware uses for
+        //this IC family: address first, data, then write_block_clock_groups groups of
+        //1 lead clock, write_block_clocks_per_group slow clocks (30us half cycle) and 4 trailing clocks.
+        _FPDK_SendBits32F(addr,addr_bits);                                                         //send address to write to
+
+        for( uint32_t p=0; p<count; p++ )
+          _FPDK_SendBits32F(data[p],data_bits);                                                    //write 1 word
+
+        if( write_block_clock_groups>1 )
+          _FPDK_SET_DAT_F(1);                                                                      //keep DAT high between groups
+
+        _FPDK_DelayUS(4);
+
+        for( uint32_t g=0; g<write_block_clock_groups; g++ )
+        {
+          if( g==(write_block_clock_groups-1) )
+            _FPDK_SetDatIncoming();                                                                //set DAT incoming for last group
+
+          _FPDK_Clock();                                                                           //1 lead clock
+          _FPDK_DelayUS(2);
+
+          for( uint32_t w=0; w<write_block_clocks_per_group; w++ )                                 //slow clocks
+          {
+            _FPDK_CLK_UP();
+            _FPDK_DelayUS(30);
+            _FPDK_CLK_DOWN();
+            _FPDK_DelayUS(30);
+          }
+
+          for( uint32_t e=0; e<4; e++ )                                                            //4 trailing clocks
+            _FPDK_Clock();
+        }
+
+        _FPDK_SetDatOutgoing();                                                                    //set DAT outgoing
       }
       break;
 
@@ -706,6 +747,7 @@ uint16_t FPDK_ReadIC(const uint16_t ic_id, const FPDKICTYPE type,
   switch( type )                                                                                   //send READ command
   {
     case FPDK_IC_FLASH_2: 
+    case FPDK_IC_FLASH_2L:
       resp = _FPDK_SendCommand(type,0xC); 
       break;
     default:
@@ -754,6 +796,7 @@ uint16_t FPDK_VerifyIC(const uint16_t ic_id, const FPDKICTYPE type,
   switch( type )                                                                                   //send READ command
   {
     case FPDK_IC_FLASH_2: 
+    case FPDK_IC_FLASH_2L:
       resp = _FPDK_SendCommand(type,0xC); 
       break;
     default:
@@ -822,6 +865,7 @@ uint16_t FPDK_BlankCheckIC(const uint16_t ic_id, const FPDKICTYPE type,
   switch( type )                                                                                   //send READ command
   {
     case FPDK_IC_FLASH_2: 
+    case FPDK_IC_FLASH_2L:
       resp = _FPDK_SendCommand(type,0xC);
       break;
     default:
@@ -883,6 +927,7 @@ uint16_t FPDK_EraseIC(const uint16_t ic_id, const FPDKICTYPE type,
   switch( type )                                                                                   //send ERASE command
   {
     case FPDK_IC_FLASH_2: 
+    case FPDK_IC_FLASH_2L:
       resp = _FPDK_SendCommand(type,0x5);
       break;
     default:
@@ -906,7 +951,7 @@ uint16_t FPDK_EraseIC(const uint16_t ic_id, const FPDKICTYPE type,
   for( uint32_t e=0; e<erase_clocks; e++ )
   {
     _FPDK_CLK_UP();
-    _FPDK_DelayUS((FPDK_IC_FLASH_2==type)?40000:5000);
+    _FPDK_DelayUS((FPDK_IC_FLASH_2==type)?40000:(FPDK_IC_FLASH_2L==type)?20000:5000);
     _FPDK_CLK_DOWN();
     _FPDK_DelayUS(1);
     _FPDK_CLK_UP();
@@ -977,9 +1022,24 @@ uint16_t FPDK_WriteIC(const uint16_t ic_id, const FPDKICTYPE type,
     if( !block_is_empty )                                                                          //skip empty blocks
     {
       uint32_t write_addr_aligned = ((addr+p) / write_block_size) * write_block_size;
-      _FPDK_WriteAddr(type, 
-                      write_addr_aligned, addr_bits, write_buf, data_bits, 
-                      write_block_size, write_block_clock_groups, write_block_clocks_per_group);
+      if( FPDK_IC_FLASH_2L == type )
+      {
+        for( uint32_t w=0; w<write_block_size; w++ )                                               //limited-voltage mode: one word at a time
+        {
+          if( blank_value == (write_buf[w] & blank_value) )                                        //nothing to write in this word
+            continue;
+          uint16_t tmp_buf[8];
+          memset( tmp_buf, 0xFF, sizeof(tmp_buf) );
+          tmp_buf[w] = write_buf[w];
+          _FPDK_WriteAddr(type, 
+                          write_addr_aligned, addr_bits, tmp_buf, data_bits, 
+                          write_block_size, write_block_clock_groups, write_block_clocks_per_group);
+        }
+      }
+      else
+        _FPDK_WriteAddr(type, 
+                        write_addr_aligned, addr_bits, write_buf, data_bits, 
+                        write_block_size, write_block_clock_groups, write_block_clocks_per_group);
     }
 
     _FPDK_DelayUS(100);                                                                            //wait a bit so voltage can stabelize again (makes writing much more reliable)

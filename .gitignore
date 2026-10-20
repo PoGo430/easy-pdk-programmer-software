@@ -1,2 +1,3 @@
 easypdkprog
 *.o
+Firmware/source/build/

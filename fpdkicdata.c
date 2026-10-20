@@ -223,7 +223,6 @@ static const FPDKICDATA fpdk_ic_table[] =
   { .name                         = "PFS172",
     .name_variant_1               = "PFS172B",
     .name_variant_2               = "PFS121",
-    .name_variant_3               = "PFS122",   //same silicon/ID as PFS172, PFS122 adds a 12-bit ADC
     .otpid                        = 0x2AA6,
     .id12bit                      = 0xCA6,
     .type                         = FPDK_IC_FLASH_2,
@@ -249,6 +248,39 @@ static const FPDKICDATA fpdk_ic_table[] =
     .vdd_erase_hv                 = 5.3,
     .vpp_erase_hv                 = 0.0,
     .erase_clocks                 = 14, //2 (not sure why we need so many clocks)
+  },
+
+  //PFS122 (datasheet PDK-DS-PFS122 V004): 2KW MTP, 128 bytes RAM, 14 bit code, same chip ID as PFS172.
+  //Written in the datasheet's "limited-voltage programming mode" (VDD 5.0V max., the Easy PDK cannot
+  //generate the 7.5V of the normal mode): one word per write at 4.8V, 2 write clock groups.
+  //Values are the ones the upstream development branch uses for this IC family.
+  //Needs programmer firmware 1.4 (FPDK_IC_FLASH_2L).
+  { .name                         = "PFS122",
+    .otpid                        = 0x2AA6,
+    .id12bit                      = 0xCA6,
+    .type                         = FPDK_IC_FLASH_2L,
+    .addressbits                  = 13,
+    .codebits                     = 14,
+    .codewords                    = 0x800,
+    .ramsize                      = 0x80,
+    .exclude_code_start           = 0x7E0, //OTP area 16 words, contains empty space for user and BGTR IHRCR factory values
+    .exclude_code_end             = 0x7F0,
+    .vdd_cmd_read                 = 2.5,
+    .vpp_cmd_read                 = 5.5,
+    .vdd_read_hv                  = 2.5,
+    .vpp_read_hv                  = 0.0,
+    .vdd_cmd_write                = 2.5,
+    .vpp_cmd_write                = 5.5,
+    .vdd_write_hv                 = 4.8,
+    .vpp_write_hv                 = 0.0,
+    .write_block_size             = 4,
+    .write_block_clock_groups     = 2,
+    .write_block_clocks_per_group = 4,
+    .vdd_cmd_erase                = 2.5,
+    .vpp_cmd_erase                = 5.5,
+    .vdd_erase_hv                 = 4.8,
+    .vpp_erase_hv                 = 0.0,
+    .erase_clocks                 = 14,
   },
 
   { .name                         = "PFS173",
@@ -423,6 +455,13 @@ FPDKICDATA* FPDKICDATA_GetICDataByCmdResponse(const FPDKICTYPE type, const uint3
     icdata = _FPDKICDATA_GetICDataById12BitAndCodebits(type, cmdrsp>>(shift*3), 13);  //try as 13 codebits words
 
   return icdata;
+}
+
+FPDKICDATA* FPDKICDATA_GetICDataByIndex(const unsigned int index)
+{
+  if( index < (sizeof(fpdk_ic_table)/sizeof(FPDKICDATA)) )
+    return (FPDKICDATA*)&fpdk_ic_table[index];
+  return 0;
 }
 
 FPDKICDATA* FPDKICDATA_GetICDataByName(const char* name)

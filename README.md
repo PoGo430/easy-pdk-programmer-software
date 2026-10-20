@@ -31,14 +31,17 @@ https://free-pdk.github.io
 
 Examples:
 
-PFS122 / PFS121 / PFS172B (this fork):
- These are accepted as IC names on the stable 1.3 software and firmware. They have
- the same chip ID (0xCA6) as the PFS172 and are programmed with the PFS172 settings,
- so no firmware update is needed:
+PFS122 (this fork, version 1.4):
+ The PFS122 has its own entry, written the way its datasheet calls "limited-voltage
+ programming mode" (VDD 5.0V max., one word per write). The algorithm is the one the
+ upstream development branch uses for this IC family, added to the stable 1.3 code.
+ It needs the 1.4 programmer firmware from this repository:
+   Firmware/EASYPDKPROG_1.4.dfu  (or build it: make -C Firmware/source)
+ Flash it once: unplug the programmer, hold its button, plug in USB, release the button, then
+```  dfu-util -d 0483:df11 -a "@Internal Flash  /0x08000000/064*0002Kg" --dfuse-address 0x08000000 -D Firmware/EASYPDKPROG_1.4.dfu```
+ All other ICs work with both the 1.3 and the 1.4 firmware.
 ```  easypdkprog -n PFS122 write myprog.ihx```
- (The upstream development branch programs this family with a newer write method
- and needs its own firmware. If writing a PFS122 ever fails verification here,
- that is the fallback.)
+ PFS121 and PFS172B are accepted as names for the PFS172 (same chip ID, 1.3 PFS172 settings).
 
 list all supported ICs:
 ```  easypdkprog list```

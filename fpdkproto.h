@@ -17,9 +17,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __FPDKPROTO_H_
 #define __FPDKPROTO_H_
 
-#define __FPDKPROTO__ "1.3"
+#define __FPDKPROTO__ "1.4"
 #define FPDKPROTO_MAJOR 1
-#define FPDKPROTO_MINOR 3
+#define FPDKPROTO_MINOR 4
+#define FPDKPROTO_MINOR_MIN 3   //1.3 firmware still works for everything except PFS122 (FPDK_IC_FLASH_2L)
 
 typedef enum FPDKPROTO_CMD
 {

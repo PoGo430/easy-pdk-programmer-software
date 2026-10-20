@@ -29,6 +29,7 @@ typedef enum FPDKICTYPE
 //  FPDK_IC_FLASH    = 0xF0,
   FPDK_IC_FLASH_1  = 0xF1,
   FPDK_IC_FLASH_2  = 0xF2,
+  FPDK_IC_FLASH_2L = 0xF3,   //PFS122: FLASH_2 protocol, limited-voltage write (needs firmware 1.4)
 } FPDKICTYPE;
 
 #define FPDK_IS_FLASH_TYPE(type) (0xF0==(type&0xF0))
@@ -71,5 +72,6 @@ typedef struct FPDKICDATA
 FPDKICDATA* FPDKICDATA_GetICDataById12Bit(const uint16_t id12bit);
 FPDKICDATA* FPDKICDATA_GetICDataByCmdResponse(const FPDKICTYPE type, const uint32_t cmdrsp);
 FPDKICDATA* FPDKICDATA_GetICDataByName(const char* name);
+FPDKICDATA* FPDKICDATA_GetICDataByIndex(const unsigned int index);   //0.. until it returns 0
 
 #endif //__FPDKICDATA_H_

@@ -29,7 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "fpdkihex8.h"
 #include "argp.h"
 
-const char *argp_program_version                = "easypdkprog 1.3";
+const char *argp_program_version                = "easypdkprog 1.4 (stable 1.3 + native PFS122)";
 static const char easypdkprog_doc[]             = "easypdkprog -- read, write and execute programs on PADAUK microcontroller\nhttps://free-pdk.github.io";
 static const char easypdkprog_args_doc[]        = "list|probe|read|write|erase|start [FILE]";
 
@@ -149,10 +149,9 @@ int main( int argc, const char * argv [] )
     char mculist[100][128];
     unsigned int idx=0;
 
-    for( uint16_t id=1; id<0xFFF; id++ )
+    FPDKICDATA* icdata;
+    for( unsigned int ti=0; (icdata = FPDKICDATA_GetICDataByIndex(ti)) != 0; ti++ )
     {
-      FPDKICDATA* icdata = FPDKICDATA_GetICDataById12Bit(id);
-      if( icdata )
       {
         sprintf( mculist[idx++], " %-8s (0x%03X): %s: %d (%d bit), RAM: %3d bytes %s", icdata->name, icdata->id12bit, FPDK_IS_FLASH_TYPE(icdata->type)?"FLASH":"OTP  ", icdata->codewords, icdata->codebits, icdata->ramsize, icdata->vdd_cmd_write?"":"(RO)");
         if( icdata->name_variant_1[0] )
@@ -244,6 +243,14 @@ int main( int argc, const char * argv [] )
 
   verbose_printf("FREE-PDK EASY PROG - Hardware:%u.%u Firmware:%u.%u Protocol:%u.%u\n", hw_major, hw_minor, sw_major, sw_minor, proto_major, proto_minor);
 
+  if( icdata && (FPDK_IC_FLASH_2L == icdata->type) && (proto_minor < 4) )
+  {
+    fprintf(stderr, "ERROR: %s needs programmer firmware 1.4 (this programmer has %u.%u).\n"
+                    "       Flash Firmware/source/build/EASYPDKPROG.dfu from this repository, see README.\n",
+                    icdata->name, sw_major, sw_minor);
+    return -6;
+  }
+
   switch( arguments.command )
   {
     case 'p': //probe
@@ -273,6 +280,10 @@ int main( int argc, const char * argv [] )
             printf(" / %s", icdata->name_variant_2);
           if( icdata->name_variant_3[0] )
             printf(" / %s", icdata->name_variant_3);
+          FPDKICDATA* other;
+          for( unsigned int ti=0; (other = FPDKICDATA_GetICDataByIndex(ti)) != 0; ti++ )
+            if( (other != icdata) && (other->id12bit == icdata->id12bit) )
+              printf(" / %s (same chip ID, use -n %s)", other->name, other->name);
 
           printf(" ICID:0x%03X", icdata->id12bit);
         }

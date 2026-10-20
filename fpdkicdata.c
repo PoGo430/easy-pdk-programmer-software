@@ -221,6 +221,9 @@ static const FPDKICDATA fpdk_ic_table[] =
   },
 
   { .name                         = "PFS172",
+    .name_variant_1               = "PFS172B",
+    .name_variant_2               = "PFS121",
+    .name_variant_3               = "PFS122",   //same silicon/ID as PFS172, PFS122 adds a 12-bit ADC
     .otpid                        = 0x2AA6,
     .id12bit                      = 0xCA6,
     .type                         = FPDK_IC_FLASH_2,
@@ -434,6 +437,9 @@ FPDKICDATA* FPDKICDATA_GetICDataByName(const char* name)
       return (FPDKICDATA*)&fpdk_ic_table[i];
 
     if( 0 == strcasecmp(name, fpdk_ic_table[i].name_variant_2) )
+      return (FPDKICDATA*)&fpdk_ic_table[i];
+
+    if( 0 == strcasecmp(name, fpdk_ic_table[i].name_variant_3) )
       return (FPDKICDATA*)&fpdk_ic_table[i];
   }
 

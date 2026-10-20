@@ -31,6 +31,15 @@ https://free-pdk.github.io
 
 Examples:
 
+PFS122 / PFS121 / PFS172B (this fork):
+ These are accepted as IC names on the stable 1.3 software and firmware. They have
+ the same chip ID (0xCA6) as the PFS172 and are programmed with the PFS172 settings,
+ so no firmware update is needed:
+```  easypdkprog -n PFS122 write myprog.ihx```
+ (The upstream development branch programs this family with a newer write method
+ and needs its own firmware. If writing a PFS122 ever fails verification here,
+ that is the fallback.)
+
 list all supported ICs:
 ```  easypdkprog list```
 
